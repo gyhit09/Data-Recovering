@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include<time.h>
 #include<fcntl.h>
 #include <linux/types.h>
 #include "ext2.h"
@@ -100,12 +101,20 @@ struct ext2_inode* is_dnode(int group, int inode_id) {
 
 
     if (inodes_buf[offset].i_dtime == 0) {
+	//  printf("UNdelete Inode %d there are %d databolck\n", group * superblock.s_inodes_per_group + inode_id + 1,  inodes_buf[offset].i_size / blocksize + 1);
+      //  int i;
+     //   for (i = 0; i < EXT2_N_BLOCKS; i++) {
+      //      printf("%d, ", inodes_buf[offset].i_block[i]);
+      //  }
+
+      //  printf("\n");
         return NULL;
     } else {
+	time_t dt=inodes_buf[offset].i_dtime;
         //printf("size:%d\n",inodes_buf[offset].i_size);
         if (inodes_buf[offset].i_size == 0)//why a inode has no data with a deletiem????????????????
             return NULL;
-        printf("Inode %d Deleted at %0x,there are %d databolck\n", group * superblock.s_inodes_per_group + inode_id + 1, inodes_buf[offset].i_dtime, inodes_buf[offset].i_size / blocksize + 1);
+        printf("Inode %d Deleted at %s,there are %d databolck %d bytes\n", group * superblock.s_inodes_per_group + inode_id + 1, ctime(&dt), inodes_buf[offset].i_size / blocksize + 1,inodes_buf[offset].i_size);
         int i;
         for (i = 0; i < EXT2_N_BLOCKS; i++) {
             printf("%d, ", inodes_buf[offset].i_block[i]);
@@ -118,11 +127,11 @@ struct ext2_inode* is_dnode(int group, int inode_id) {
 }
 
 int undelete(struct ext2_inode *d_inode, int id) {
-    printf("The file will be store in /home/edward/\n");
+   
 
-    char filename[50] = "/home/inode";
+    char filename[50] = "./inode";
     char temp[10];
-    sprintf(temp, "%d", id);
+    sprintf(temp, "%d", id+1);
     strcat(filename, temp);
 
     int file = creat(filename, 777);
@@ -131,18 +140,29 @@ int undelete(struct ext2_inode *d_inode, int id) {
     int block_num = d_inode->i_size / blocksize + 1;
     int size = 0;
     int i;
-    for (i = 0; d_inode->i_block[i] != 0/*i < block_num*/; i++) {//????????????????????     
+	//printf("the block_num is %d\n",block_num);
+    for (i = 0; i< block_num&& i<12; i++) {
+	if(d_inode->i_block[i]==0)
+		{ 
+			//printf("block %d is hole\n",i);
+			size = lseek(file,  blocksize,SEEK_CUR);
+			continue;
+		}
         mdev_readblock(d_inode->i_block[i], buf);
         if ((d_inode->i_size - size) < blocksize) {
             write(file, buf, d_inode->i_size - size);
         } else {
             size += write(file, buf, blocksize);
         }
+	//printf("block %d is undeleted\n",i);
     }
     char cmd[100] = "chmod 777 ";
     strcat(cmd, filename);
     system(cmd);
-    printf("The data of first 12 direct block is undeleted!\n");
+	if(block_num>12)
+   		 printf("The data in first 12 direct block is undeleted!\n\n");
+	else 
+		 printf("The file  is undeleted!\n\n");
 
 }
 
