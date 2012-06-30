@@ -1,0 +1,12 @@
+一直找不到单独编译模块的方法，最终还是把整个系统重新编译了。
+
+1下载内核源代码，拷贝到/usr/src目录，将ext2文件实现做简单修改。
+2.拷贝原系统/boot/config-XXXX配置文件到/usr/src 命名为.config
+3.make memuconfig 第一次可能会提示错误，缺少图形库，sudo apt-get install 缺少的文件即可。这步主要配置需要编译的模块。
+4.make  时间非常慢
+5.make modules_install  安装模块
+6.make install  安装内核
+7.sudo mkinitramfs -o /boot/initrd.img-2.6.32.59(自己下的版本)
+8.sudo update-initramfs -c -k 2.6.32.59(自己命名的内核名)
+9.sudo update-grub2 产生grub.cfg启动配置文件
+10 重启
